@@ -1,0 +1,13 @@
+# Binaries
+thirsti-backend
+thirsti-backend.exe
+
+sqlite.db
+
+# Logs
+*.log
+
+# Editor
+.vscode
+.idea
+.DS_Store
