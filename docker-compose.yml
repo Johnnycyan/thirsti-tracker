@@ -2,42 +2,16 @@ version: '3.8'
 
 services:
   app:
-    build:
-      context: ./backend
-      dockerfile: ../Dockerfile
+    image: ghcr.io/johnnycyan/thirsti-tracker:latest
     ports:
       - "8080:8080"
     environment:
       - PORT=8080
-      - DB_HOST=db
-      - DB_PORT=3306
-      - DB_USER=app
-      - DB_PASSWORD=changeme
-      - DB_NAME=thirsti_tracker
       - JWT_SECRET=change-this-to-a-secure-secret-in-production
-      - DISABLE_REGISTRATION=false  # Set to 'true' after creating admin account
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-
-  db:
-    image: mysql:8.0
-    environment:
-      - MYSQL_ROOT_PASSWORD=rootpassword
-      - MYSQL_DATABASE=thirsti_tracker
-      - MYSQL_USER=app
-      - MYSQL_PASSWORD=changeme
-    ports:
-      - "3306:3306"
+      - DISABLE_REGISTRATION=false
     volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - thirsti_data:/app/data
     restart: unless-stopped
 
 volumes:
-  mysql_data:
+  thirsti_data:
