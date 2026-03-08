@@ -383,22 +383,27 @@ func Dispense(c *gin.Context) {
 
 	// Calculate doses
 	dosesBase := 0
+	dosesFlavorBase := 0
 	switch req.SizeOz {
 	case 6:
 		dosesBase = 1
+		dosesFlavorBase = 1
 	case 12:
 		dosesBase = 2
+		dosesFlavorBase = 1
 	case 18:
 		dosesBase = 3
+		dosesFlavorBase = 2
 	case 24:
 		dosesBase = 4
+		dosesFlavorBase = 2
 	}
 
 	co2Multiplier := req.SparkleLevel  // 0, 1, 2, 3
 	flavorMultiplier := req.FlavorLevel // 0, 1, 2
 
 	co2Doses := dosesBase * co2Multiplier
-	flavorDoses := dosesBase * flavorMultiplier
+	flavorDoses := dosesFlavorBase * flavorMultiplier
 
 	// Log it
 	log := models.DispenseLog{
