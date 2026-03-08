@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
-	"blankapp/database"
-	"blankapp/models"
+	"thirsti-tracker/database"
+	"thirsti-tracker/models"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"

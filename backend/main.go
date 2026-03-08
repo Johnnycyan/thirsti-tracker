@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"os"
 
-	"blankapp/database"
-	"blankapp/handlers"
-	"blankapp/middleware"
+	"thirsti-tracker/database"
+	"thirsti-tracker/handlers"
+	"thirsti-tracker/middleware"
 
 	"github.com/gin-gonic/gin"
 )

@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"blankapp/database"
-	"blankapp/models"
+	"thirsti-tracker/database"
+	"thirsti-tracker/models"
 
 	"github.com/gin-gonic/gin"
 )

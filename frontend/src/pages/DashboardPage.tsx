@@ -73,7 +73,7 @@ function DashboardPage() {
       {/* Top Section: Current Status */}
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center', mb: 6 }}>
         <Card sx={{ bgcolor: '#1E1E1E', color: '#fff', borderRadius: 4, textAlign: 'center', p: 2, width: { xs: '100%', md: '45%' }, maxWidth: 500, display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ minHeight: 220, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', pb: 2 }}>
+          <Box sx={{ height: 240, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', pb: 2 }}>
             {current_co2 && current_co2.id ? (
               <CO2TankGraphic status="full" height={220} width={80} />
             ) : (
@@ -81,7 +81,10 @@ function DashboardPage() {
             )}
           </Box>
           <Box sx={{ mt: 'auto' }}>
-            <Typography variant="h3" fontWeight="bold">{co2Doses}</Typography>
+            <Typography variant="h5" sx={{ color: current_co2?.id ? '#00BFFF' : '#555555' }}>
+              {current_co2?.id ? (current_co2.status === 'empty' ? 'Empty CO2' : 'Full CO2') : 'None'}
+            </Typography>
+            <Typography variant="h3" fontWeight="bold" sx={{ mt: 1 }}>{co2Doses}</Typography>
             <Typography variant="subtitle1" color="gray">Doses Used</Typography>
             {analytics?.avg_co2_doses > 0 && current_co2?.id && (
               <Typography variant="body2" color="#00BFFF" sx={{ mt: 1, fontWeight: 'bold' }}>
@@ -91,22 +94,24 @@ function DashboardPage() {
           </Box>
           <Divider sx={{ my: 2, borderColor: '#333' }} />
           <Typography sx={{ mt: 2, color: '#aaa', mb: 1 }}>Extras in Stock: {(inventory?.co2_full?.length || 0) + (inventory?.co2_empty?.length || 0)}</Typography>
-          <Box sx={{ display: 'flex', gap: 1, overflowX: 'auto', p: 1, justifyContent: 'center', minHeight: 88 }}>
+          <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', p: 1, justifyContent: 'center', height: 120, alignItems: 'flex-end' }}>
             {inventory?.co2_full?.map((tank: any, i: number) => (
-              <Box key={`full-${i}`} sx={{ width: 30, height: 80 }}>
+              <Box key={`full-${i}`} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 60 }}>
                 <CO2TankGraphic status="full" height={80} width={30} />
+                <Typography variant="caption" sx={{ mt: 1, whiteSpace: 'nowrap' }}>Full CO2</Typography>
               </Box>
             ))}
             {inventory?.co2_empty?.map((tank: any, i: number) => (
-              <Box key={`empty-${i}`} sx={{ width: 30, height: 80, opacity: 0.5 }}>
+              <Box key={`empty-${i}`} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 60, opacity: 0.5 }}>
                 <CO2TankGraphic status="empty" height={80} width={30} />
+                <Typography variant="caption" sx={{ mt: 1, whiteSpace: 'nowrap' }}>Empty CO2</Typography>
               </Box>
             ))}
           </Box>
         </Card>
 
         <Card sx={{ bgcolor: '#1E1E1E', color: '#fff', borderRadius: 4, textAlign: 'center', p: 2, width: { xs: '100%', md: '45%' }, maxWidth: 500, display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ minHeight: 220, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', pb: 2 }}>
+          <Box sx={{ height: 240, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', pb: 2 }}>
             {current_flavor && current_flavor.id ? (
               <FlavorPodGraphic name={flavorName} colorHex={flavorColor} height={140} width={100} />
             ) : (
@@ -125,7 +130,7 @@ function DashboardPage() {
           </Box>
           <Divider sx={{ my: 2, borderColor: '#333' }} />
           <Typography sx={{ mt: 2, color: '#aaa', mb: 1 }}>Extras in Stock: {inventory?.flavor_extra?.length || 0}</Typography>
-          <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', p: 1, justifyContent: 'center', minHeight: 88 }}>
+          <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', p: 1, justifyContent: 'center', height: 120, alignItems: 'flex-end' }}>
             {inventory?.flavor_extra?.map((pod: any) => (
               <Box key={pod.id} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 60 }}>
                 <FlavorPodGraphic name={pod.name} colorHex={pod.color_hex} height={60} width={40} />

@@ -3,7 +3,7 @@ package database
 import (
 	"log"
 
-	"blankapp/models"
+	"thirsti-tracker/models"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"

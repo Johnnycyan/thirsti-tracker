@@ -1,4 +1,4 @@
-# BlankApp
+# Thirsti Tracker
 
 A full-stack web application template with React frontend and Go backend.
 
@@ -63,7 +63,7 @@ Environment variables (set in docker-compose.yml or .env):
 | `DB_PORT` | MySQL port | 3306 |
 | `DB_USER` | MySQL user | root |
 | `DB_PASSWORD` | MySQL password | - |
-| `DB_NAME` | Database name | blankapp |
+| `DB_NAME` | Database name | thirsti_tracker |
 | `JWT_SECRET` | JWT signing secret | (change this!) |
 | `DISABLE_REGISTRATION` | Block new registrations | false |
 
