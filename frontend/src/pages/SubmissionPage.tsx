@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogActions,
   Button,
+  Divider,
 } from "@mui/material";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import ThirstiControlPanel from "../components/Graphics/ControlPanel";
@@ -111,11 +112,39 @@ function SubmissionPage() {
         backgroundColor: "#121212",
       }}
     >
-      <Typography
-        variant="h5"
-        sx={{ mb: 4, color: "#00BFFF", fontWeight: "bold" }}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 2,
+          mb: 2,
+          width: "100%",
+        }}
       >
-        Submit your dispense
+        <Divider sx={{ flexGrow: 1, borderColor: "#333", maxWidth: 400 }} />
+        <Typography
+          variant="h5"
+          sx={{
+            color: "#fff",
+            fontWeight: 900,
+            letterSpacing: "2px",
+            textTransform: "uppercase",
+            background: "-webkit-linear-gradient(45deg, #00BFFF, #FF00FF)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            textAlign: "center",
+          }}
+        >
+          Thirsti Usage Tracking
+        </Typography>
+        <Divider sx={{ flexGrow: 1, borderColor: "#333", maxWidth: 400 }} />
+      </Box>
+      <Typography variant="h6" sx={{ color: "#ffffff" }}>
+        This tracks the usage of the Thirsti machine.
+      </Typography>
+      <Typography variant="h6" sx={{ mb: 4, color: "#ffffff" }}>
+        Please enter the settings you used and hit SUBMIT
       </Typography>
 
       <ThirstiControlPanel
@@ -126,7 +155,7 @@ function SubmissionPage() {
 
       {success && (
         <Typography sx={{ mt: 3, color: "#4caf50", fontWeight: "bold" }}>
-          Dispense logged successfully!
+          Usage logged successfully!
         </Typography>
       )}
 
@@ -136,11 +165,10 @@ function SubmissionPage() {
         onClose={() => setConfirmOpen(false)}
         PaperProps={{ sx: { bgcolor: "#1E1E1E", color: "#fff" } }}
       >
-        <DialogTitle>Confirm Dispense?</DialogTitle>
+        <DialogTitle>Confirm Usage?</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to log this dispense with the current
-            settings?
+            Are you sure you want to log this usage with the current settings?
           </Typography>
           <ul>
             <li>Size: {settings.sizeOz}oz</li>
