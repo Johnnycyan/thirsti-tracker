@@ -1,12 +1,23 @@
 # Thirsti Tracker
 
-A full-stack web application template with React frontend and Go backend.
+A full-stack web application designed to track and visualize the usage of a Ninja Thirsti machine. It monitors CO2 tank levels, flavor pod usage, and provides advanced analytics on dispensing habits.
 
 ## Features
 
-- **React Frontend**: TypeScript, PrimeReact with Lara theme, Material You color sync
-- **Go Backend**: Gin framework, GORM with MySQL, JWT authentication, WebSocket support
-- **Docker**: Multi-stage build, docker-compose with MySQL service
+- **Automated Tracking**: Logs every dispense including size (6oz-24oz), sparkle level, and flavor intensity.
+- **Visual Dashboard**: Features a dynamic dashboard showing the real-time status of installed CO2 tanks and Flavor Pods.
+- **Predictive Analytics**: Calculates estimated remaining doses for tanks and pods based on historical consumption averages.
+- **Inventory Management**: Keeps track of full/empty CO2 tanks and extra flavor pods stored in reserve.
+- **Admin Control Panel**: A secure interface to purchase new stock, install tanks/pods, and generate one-time submission codes.
+- **REST API**: Built with Go and Gin, utilizing a SQLite database for fast, lightweight data storage.
+- **Responsive UI**: A highly polished, custom-styled frontend built with React and Material UI.
+
+## Tech Stack
+
+- **Frontend**: React, TypeScript, Material UI, Recharts
+- **Backend**: Go, Gin Framework, GORM
+- **Database**: SQLite
+- **Deployment**: Docker, GitHub Actions (GHCR)
 
 ## Development
 
@@ -14,7 +25,7 @@ A full-stack web application template with React frontend and Go backend.
 
 - Node.js 18+
 - Go 1.21+
-- Docker & Docker Compose (for production)
+- Docker & Docker Compose (for containerized deployment)
 
 ### Frontend Development
 
@@ -38,52 +49,23 @@ The backend runs on http://localhost:8080.
 
 ## Production Deployment
 
-### Build Frontend
+This project includes a fully automated CI/CD pipeline.
 
-```bash
-cd frontend
-npm run build
-# Copy dist/* to backend/static/
+- High-level changes pushed to the `main` branch or tagged with `v*.*.*` automatically trigger a GitHub Action.
+- The action builds a multi-stage Docker container encompassing the React frontend and Go backend.
+- The compiled image is seamlessly published to `ghcr.io`.
+
+### Deploy with Docker Compose
+
+```yaml
+version: '3.8'
+
+services:
+  thirsti:
+    image: ghcr.io/YOUR_GITHUB_USERNAME/thirsti-tracker:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - JWT_SECRET=change-this-to-a-secure-secret-in-production
+      - DISABLE_REGISTRATION=false # Set to 'true' after creating the first admin account
 ```
-
-### Deploy with Docker
-
-```bash
-docker-compose up -d
-```
-
-## Configuration
-
-Environment variables (set in docker-compose.yml or .env):
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Server port | 8080 |
-| `DB_HOST` | MySQL host | localhost |
-| `DB_PORT` | MySQL port | 3306 |
-| `DB_USER` | MySQL user | root |
-| `DB_PASSWORD` | MySQL password | - |
-| `DB_NAME` | Database name | thirsti_tracker |
-| `JWT_SECRET` | JWT signing secret | (change this!) |
-| `DISABLE_REGISTRATION` | Block new registrations | false |
-
-## Material You Color Sync
-
-Users can sync their Android Material You colors to the website:
-
-1. Open the Android app on your phone
-2. Go to Settings > Sync Theme
-3. Colors will be sent to the server and applied to the website
-
-## API Endpoints
-
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login user
-
-### Theme (Authenticated)
-- `GET /api/theme/colors` - Get user's theme colors
-- `POST /api/theme/colors` - Set user's theme colors
-
-### WebSocket
-- `GET /ws` - WebSocket connection (requires auth token)

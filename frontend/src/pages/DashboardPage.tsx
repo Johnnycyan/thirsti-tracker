@@ -95,13 +95,13 @@ function DashboardPage() {
           <Divider sx={{ my: 2, borderColor: '#333' }} />
           <Typography sx={{ mt: 2, color: '#aaa', mb: 1 }}>Extras in Stock: {(inventory?.co2_full?.length || 0) + (inventory?.co2_empty?.length || 0)}</Typography>
           <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', p: 1, justifyContent: 'center', height: 120, alignItems: 'flex-end' }}>
-            {inventory?.co2_full?.map((tank: any, i: number) => (
+            {inventory?.co2_full?.map((_: any, i: number) => (
               <Box key={`full-${i}`} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 60 }}>
                 <CO2TankGraphic status="full" height={80} width={30} />
                 <Typography variant="caption" sx={{ mt: 1, whiteSpace: 'nowrap' }}>Full CO2</Typography>
               </Box>
             ))}
-            {inventory?.co2_empty?.map((tank: any, i: number) => (
+            {inventory?.co2_empty?.map((_: any, i: number) => (
               <Box key={`empty-${i}`} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 60, opacity: 0.5 }}>
                 <CO2TankGraphic status="empty" height={80} width={30} />
                 <Typography variant="caption" sx={{ mt: 1, whiteSpace: 'nowrap' }}>Empty CO2</Typography>
