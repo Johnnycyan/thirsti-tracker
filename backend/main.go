@@ -58,14 +58,20 @@ func main() {
 			protected.POST("/admin/co2/install", handlers.InstallCO2)
 			protected.DELETE("/admin/co2/:id", handlers.DeleteCO2)
 			protected.PUT("/admin/co2/:id", handlers.UpdateCO2)
+			protected.POST("/admin/co2/:id/refill", handlers.RefillCO2)
 
 			protected.POST("/admin/flavor/purchase", handlers.PurchaseFlavor)
 			protected.POST("/admin/flavor/install/:id", handlers.InstallFlavor)
 			protected.DELETE("/admin/flavor/:id", handlers.DeleteFlavor)
 			protected.PUT("/admin/flavor/:id", handlers.UpdateFlavor)
+			protected.GET("/admin/flavor/archive", handlers.GetFlavorArchive)
 
 			protected.POST("/admin/code", handlers.GenerateCode)
 			protected.GET("/admin/code", handlers.GetCode)
+
+			protected.GET("/admin/logs", handlers.GetAdminLogs)
+			protected.PUT("/admin/log/:id", handlers.UpdateDispenseLog)
+			protected.DELETE("/admin/log/:id", handlers.DeleteDispenseLog)
 
 			protected.GET("/theme/colors", handlers.GetThemeColors)
 			protected.POST("/theme/colors", handlers.SetThemeColors)

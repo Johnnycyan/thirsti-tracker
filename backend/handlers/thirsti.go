@@ -43,18 +43,26 @@ func GetCode(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": config.SubmissionCode})
 }
 
-// Admin stats
+// GetInventory returns active (non-consumed) tanks and pods.
 func GetInventory(c *gin.Context) {
 	var co2Tanks []models.CO2Tank
 	var flavorPods []models.FlavorPod
 
-	database.DB.Find(&co2Tanks)
-	database.DB.Find(&flavorPods)
+	// Exclude consumed flavor pods from the active inventory
+	database.DB.Where("status != ?", models.TankConsumed).Find(&co2Tanks)
+	database.DB.Where("status != ?", models.PodConsumed).Find(&flavorPods)
 
 	c.JSON(http.StatusOK, gin.H{
 		"co2_tanks":   co2Tanks,
 		"flavor_pods": flavorPods,
 	})
+}
+
+// GetFlavorArchive returns only consumed (archived) flavor pods.
+func GetFlavorArchive(c *gin.Context) {
+	var consumed []models.FlavorPod
+	database.DB.Where("status = ?", models.PodConsumed).Order("consumed_at desc").Find(&consumed)
+	c.JSON(http.StatusOK, gin.H{"archived_pods": consumed})
 }
 
 type PurchaseCO2Request struct {
@@ -105,6 +113,76 @@ func InstallCO2(c *gin.Context) {
 	database.DB.Save(&extraFull)
 
 	c.JSON(http.StatusOK, gin.H{"message": "CO2 installed successfully"})
+}
+
+type RefillCO2Request struct {
+	Cost float64 `json:"cost"`
+}
+
+// RefillCO2 records a refill event for the specified CO2 tank.
+// It saves the current doses_used snapshot into CO2RefillLog,
+// then resets doses_used to 0 so usage tracking starts fresh.
+func RefillCO2(c *gin.Context) {
+	id := c.Param("id")
+	var req RefillCO2Request
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var tank models.CO2Tank
+	if err := database.DB.First(&tank, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "CO2 tank not found"})
+		return
+	}
+
+	// Log the refill event (captures doses used before refill)
+	refill := models.CO2RefillLog{
+		CO2TankID:         tank.ID,
+		DosesBeforeRefill: tank.DosesUsed,
+		Cost:              req.Cost,
+		RefilledAt:        time.Now(),
+	}
+	database.DB.Create(&refill)
+
+	// Reset usage counter and update cost for the refill
+	tank.DosesUsed = 0
+	tank.Cost = req.Cost
+	database.DB.Save(&tank)
+
+	c.JSON(http.StatusOK, gin.H{"message": "CO2 tank refilled successfully", "refill": refill})
+}
+
+func DeleteCO2(c *gin.Context) {
+	id := c.Param("id")
+	if err := database.DB.Delete(&models.CO2Tank{}, id).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Deleted"})
+}
+
+type UpdateCO2Request struct {
+	Status    models.CO2TankStatus `json:"status"`
+	DosesUsed int                  `json:"doses_used"`
+}
+
+func UpdateCO2(c *gin.Context) {
+	id := c.Param("id")
+	var req UpdateCO2Request
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	var tank models.CO2Tank
+	if err := database.DB.First(&tank, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+		return
+	}
+	tank.Status = req.Status
+	tank.DosesUsed = req.DosesUsed
+	database.DB.Save(&tank)
+	c.JSON(http.StatusOK, tank)
 }
 
 type PurchaseFlavorRequest struct {
@@ -167,38 +245,6 @@ func InstallFlavor(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Flavor pod installed successfully"})
 }
 
-func DeleteCO2(c *gin.Context) {
-	id := c.Param("id")
-	if err := database.DB.Delete(&models.CO2Tank{}, id).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete"})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"message": "Deleted"})
-}
-
-type UpdateCO2Request struct {
-	Status    models.CO2TankStatus `json:"status"`
-	DosesUsed int                  `json:"doses_used"`
-}
-
-func UpdateCO2(c *gin.Context) {
-	id := c.Param("id")
-	var req UpdateCO2Request
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	var tank models.CO2Tank
-	if err := database.DB.First(&tank, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
-		return
-	}
-	tank.Status = req.Status
-	tank.DosesUsed = req.DosesUsed
-	database.DB.Save(&tank)
-	c.JSON(http.StatusOK, tank)
-}
-
 func DeleteFlavor(c *gin.Context) {
 	id := c.Param("id")
 	if err := database.DB.Delete(&models.FlavorPod{}, id).Error; err != nil {
@@ -235,7 +281,7 @@ func UpdateFlavor(c *gin.Context) {
 	c.JSON(http.StatusOK, pod)
 }
 
-// Dashboard public stats 
+// Dashboard public stats
 func GetDashboard(c *gin.Context) {
 	// get currently installed CO2
 	var currentCO2 models.CO2Tank
@@ -253,12 +299,16 @@ func GetDashboard(c *gin.Context) {
 	database.DB.Where("status = ?", models.TankExtraEmpty).Find(&extraEmptyCO2)
 	database.DB.Where("status = ?", models.PodExtra).Find(&extraFlavor)
 
-	// stats
+	// stats - consumed items
 	var consumedCO2 []models.CO2Tank
 	database.DB.Where("status = ?", models.TankExtraEmpty).Or("status = ?", models.TankConsumed).Find(&consumedCO2)
 
 	var consumedFlavor []models.FlavorPod
 	database.DB.Where("status = ?", models.PodConsumed).Find(&consumedFlavor)
+
+	// CO2 refill logs (for dose tracking across refills)
+	var refillLogs []models.CO2RefillLog
+	database.DB.Find(&refillLogs)
 
 	avgCO2Doses := 0.0
 	avgCO2Days := 0.0
@@ -272,6 +322,10 @@ func GetDashboard(c *gin.Context) {
 				totalDays += v.ConsumedAt.Sub(*v.InstalledAt).Hours() / 24.0
 				validCount++
 			}
+		}
+		// Also count doses from refill logs for the same tanks
+		for _, r := range refillLogs {
+			totalDoses += r.DosesBeforeRefill
 		}
 		avgCO2Doses = float64(totalDoses) / float64(len(consumedCO2))
 		if validCount > 0 {
@@ -298,19 +352,104 @@ func GetDashboard(c *gin.Context) {
 		}
 	}
 
+	// Spending stats
+	// All CO2 tanks (any status) - get their costs
+	var allCO2Tanks []models.CO2Tank
+	database.DB.Unscoped().Where("deleted_at IS NULL").Find(&allCO2Tanks)
+	var allFlavorPods []models.FlavorPod
+	database.DB.Unscoped().Where("deleted_at IS NULL").Find(&allFlavorPods)
+
+	totalCO2Spent := 0.0
+	for _, t := range allCO2Tanks {
+		totalCO2Spent += t.Cost
+	}
+	// Also include refill costs
+	totalRefillSpent := 0.0
+	for _, r := range refillLogs {
+		totalRefillSpent += r.Cost
+	}
+	totalCO2Spent += totalRefillSpent
+
+	totalFlavorSpent := 0.0
+	for _, p := range allFlavorPods {
+		totalFlavorSpent += p.Cost
+	}
+
+	totalSpent := totalCO2Spent + totalFlavorSpent
+
+	avgCostPerFlavorPod := 0.0
+	if len(allFlavorPods) > 0 {
+		avgCostPerFlavorPod = totalFlavorSpent / float64(len(allFlavorPods))
+	}
+
+	// avg cost per CO2 (count unique tank purchases + refills)
+	co2PurchaseCount := len(allCO2Tanks) + len(refillLogs)
+	avgCostPerCO2 := 0.0
+	if co2PurchaseCount > 0 {
+		avgCostPerCO2 = totalCO2Spent / float64(co2PurchaseCount)
+	}
+
+	// avg cost per dose (only if we have consumed data)
+	avgCostPerFlavorDose := 0.0
+	avgCostPerCO2Dose := 0.0
+
+	if len(consumedFlavor) > 0 {
+		totalFlavorDoses := 0
+		for _, p := range consumedFlavor {
+			totalFlavorDoses += p.DosesUsed
+		}
+		if totalFlavorDoses > 0 {
+			// Only count cost of consumed pods for this metric
+			consumedFlavorCost := 0.0
+			for _, p := range consumedFlavor {
+				consumedFlavorCost += p.Cost
+			}
+			avgCostPerFlavorDose = consumedFlavorCost / float64(totalFlavorDoses)
+		}
+	}
+
+	if len(consumedCO2) > 0 {
+		totalCO2Doses := 0
+		for _, t := range consumedCO2 {
+			totalCO2Doses += t.DosesUsed
+		}
+		for _, r := range refillLogs {
+			totalCO2Doses += r.DosesBeforeRefill
+		}
+		if totalCO2Doses > 0 {
+			consumedCO2Cost := 0.0
+			for _, t := range consumedCO2 {
+				consumedCO2Cost += t.Cost
+			}
+			consumedCO2Cost += totalRefillSpent
+			avgCostPerCO2Dose = consumedCO2Cost / float64(totalCO2Doses)
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"current_co2": currentCO2,
+		"current_co2":    currentCO2,
 		"current_flavor": currentFlavor,
 		"inventory": gin.H{
-			"co2_full": extraFullCO2,
-			"co2_empty": extraEmptyCO2,
+			"co2_full":     extraFullCO2,
+			"co2_empty":    extraEmptyCO2,
 			"flavor_extra": extraFlavor,
 		},
 		"analytics": gin.H{
-			"avg_co2_doses": math.Round(avgCO2Doses),
-			"avg_co2_days": math.Round(avgCO2Days*10)/10,
+			"avg_co2_doses":    math.Round(avgCO2Doses),
+			"avg_co2_days":     math.Round(avgCO2Days*10) / 10,
 			"avg_flavor_doses": math.Round(avgFlavorDoses),
-			"avg_flavor_days": math.Round(avgFlavorDays*10)/10,
+			"avg_flavor_days":  math.Round(avgFlavorDays*10) / 10,
+		},
+		"spending": gin.H{
+			"total_spent":              math.Round(totalSpent*100) / 100,
+			"total_co2_spent":          math.Round(totalCO2Spent*100) / 100,
+			"total_flavor_spent":       math.Round(totalFlavorSpent*100) / 100,
+			"avg_cost_per_flavor_pod":  math.Round(avgCostPerFlavorPod*100) / 100,
+			"avg_cost_per_co2":         math.Round(avgCostPerCO2*100) / 100,
+			"avg_cost_per_flavor_dose": math.Round(avgCostPerFlavorDose*1000) / 1000,
+			"avg_cost_per_co2_dose":    math.Round(avgCostPerCO2Dose*1000) / 1000,
+			"has_flavor_dose_data":     len(consumedFlavor) > 0,
+			"has_co2_dose_data":        len(consumedCO2) > 0,
 		},
 	})
 }
@@ -330,10 +469,55 @@ func GetAnalytics(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"recent_dispenses": logs,
-		"all_dispenses": allLogs,
-		"co2_history": co2Tanks,
-		"flavor_history": flavorPods,
+		"all_dispenses":    allLogs,
+		"co2_history":      co2Tanks,
+		"flavor_history":   flavorPods,
 	})
+}
+
+// GetAdminLogs returns all dispense logs for the admin (paginated by newest).
+func GetAdminLogs(c *gin.Context) {
+	var logs []models.DispenseLog
+	database.DB.Order("created_at desc").Find(&logs)
+	c.JSON(http.StatusOK, gin.H{"logs": logs})
+}
+
+type UpdateDispenseLogRequest struct {
+	SparkleLevel int `json:"sparkle_level"`
+	FlavorLevel  int `json:"flavor_level"`
+	SizeOz       int `json:"size_oz"`
+	CO2Doses     int `json:"co2_doses"`
+	FlavorDoses  int `json:"flavor_doses"`
+}
+
+func UpdateDispenseLog(c *gin.Context) {
+	id := c.Param("id")
+	var req UpdateDispenseLogRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	var log models.DispenseLog
+	if err := database.DB.First(&log, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Log not found"})
+		return
+	}
+	log.SparkleLevel = req.SparkleLevel
+	log.FlavorLevel = req.FlavorLevel
+	log.SizeOz = req.SizeOz
+	log.CO2Doses = req.CO2Doses
+	log.FlavorDoses = req.FlavorDoses
+	database.DB.Save(&log)
+	c.JSON(http.StatusOK, log)
+}
+
+func DeleteDispenseLog(c *gin.Context) {
+	id := c.Param("id")
+	if err := database.DB.Delete(&models.DispenseLog{}, id).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete log"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Log deleted"})
 }
 
 // Submission Logic
@@ -408,10 +592,10 @@ func Dispense(c *gin.Context) {
 	// Log it
 	log := models.DispenseLog{
 		SparkleLevel: req.SparkleLevel,
-		FlavorLevel: req.FlavorLevel,
-		SizeOz: req.SizeOz,
-		CO2Doses: co2Doses,
-		FlavorDoses: flavorDoses,
+		FlavorLevel:  req.FlavorLevel,
+		SizeOz:       req.SizeOz,
+		CO2Doses:     co2Doses,
+		FlavorDoses:  flavorDoses,
 	}
 	database.DB.Create(&log)
 
@@ -443,4 +627,3 @@ func Dispense(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Dispense logged successfully"})
 }
-

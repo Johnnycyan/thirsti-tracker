@@ -30,29 +30,39 @@ type MachineSettings struct {
 }
 
 type CO2Tank struct {
-	ID           uint          `gorm:"primarykey" json:"id"`
-	Status       CO2TankStatus `json:"status"`
-	DosesUsed    int           `json:"doses_used"`
-	Cost         float64       `json:"cost"`
-	InstalledAt  *time.Time    `json:"installed_at"`
-	ConsumedAt   *time.Time    `json:"consumed_at"`
-	CreatedAt    time.Time     `json:"created_at"`
-	UpdatedAt    time.Time     `json:"updated_at"`
-	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+	ID          uint          `gorm:"primarykey" json:"id"`
+	Status      CO2TankStatus `json:"status"`
+	DosesUsed   int           `json:"doses_used"`
+	Cost        float64       `json:"cost"`
+	InstalledAt *time.Time    `json:"installed_at"`
+	ConsumedAt  *time.Time    `json:"consumed_at"`
+	CreatedAt   time.Time     `json:"created_at"`
+	UpdatedAt   time.Time     `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+// CO2RefillLog tracks each refill of an installed CO2 tank.
+// DosesBeforeRefill records how many doses were used before the refill.
+type CO2RefillLog struct {
+	ID               uint      `gorm:"primarykey" json:"id"`
+	CO2TankID        uint      `json:"co2_tank_id"`
+	DosesBeforeRefill int      `json:"doses_before_refill"`
+	Cost             float64   `json:"cost"`
+	RefilledAt       time.Time `json:"refilled_at"`
 }
 
 type FlavorPod struct {
-	ID           uint            `gorm:"primarykey" json:"id"`
-	Name         string          `json:"name"`
-	ColorHex     string          `json:"color_hex"`
-	Status       FlavorPodStatus `json:"status"`
-	DosesUsed    int             `json:"doses_used"`
-	Cost         float64         `json:"cost"`
-	InstalledAt  *time.Time      `json:"installed_at"`
-	ConsumedAt   *time.Time      `json:"consumed_at"`
-	CreatedAt    time.Time       `json:"created_at"`
-	UpdatedAt    time.Time       `json:"updated_at"`
-	DeletedAt    gorm.DeletedAt  `gorm:"index" json:"-"`
+	ID          uint            `gorm:"primarykey" json:"id"`
+	Name        string          `json:"name"`
+	ColorHex    string          `json:"color_hex"`
+	Status      FlavorPodStatus `json:"status"`
+	DosesUsed   int             `json:"doses_used"`
+	Cost        float64         `json:"cost"`
+	InstalledAt *time.Time      `json:"installed_at"`
+	ConsumedAt  *time.Time      `json:"consumed_at"`
+	CreatedAt   time.Time       `json:"created_at"`
+	UpdatedAt   time.Time       `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt  `gorm:"index" json:"-"`
 }
 
 type AdminConfig struct {
@@ -61,11 +71,12 @@ type AdminConfig struct {
 }
 
 type DispenseLog struct {
-	ID           uint      `gorm:"primarykey" json:"id"`
-	SparkleLevel int       `json:"sparkle_level"` 
-	FlavorLevel  int       `json:"flavor_level"`  
-	SizeOz       int       `json:"size_oz"`     
-	CO2Doses     int       `json:"co2_doses"`
-	FlavorDoses  int       `json:"flavor_doses"`
-	CreatedAt    time.Time `json:"created_at"`
+	ID           uint           `gorm:"primarykey" json:"id"`
+	SparkleLevel int            `json:"sparkle_level"`
+	FlavorLevel  int            `json:"flavor_level"`
+	SizeOz       int            `json:"size_oz"`
+	CO2Doses     int            `json:"co2_doses"`
+	FlavorDoses  int            `json:"flavor_doses"`
+	CreatedAt    time.Time      `json:"created_at"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 }

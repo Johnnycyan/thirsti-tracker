@@ -36,7 +36,7 @@ func InitDB() {
 	}
 
 	// Auto migrate models
-	err = DB.AutoMigrate(&models.User{}, &models.ThemeColors{}, &models.MachineSettings{}, &models.CO2Tank{}, &models.FlavorPod{}, &models.AdminConfig{}, &models.DispenseLog{})
+	err = DB.AutoMigrate(&models.User{}, &models.ThemeColors{}, &models.MachineSettings{}, &models.CO2Tank{}, &models.FlavorPod{}, &models.AdminConfig{}, &models.DispenseLog{}, &models.CO2RefillLog{})
 	if err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}
