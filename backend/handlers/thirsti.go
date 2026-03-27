@@ -311,45 +311,25 @@ func GetDashboard(c *gin.Context) {
 	database.DB.Find(&refillLogs)
 
 	avgCO2Doses := 0.0
-	avgCO2Days := 0.0
 	if len(consumedCO2) > 0 {
 		totalDoses := 0
-		totalDays := 0.0
-		validCount := 0
 		for _, v := range consumedCO2 {
 			totalDoses += v.DosesUsed
-			if v.InstalledAt != nil && v.ConsumedAt != nil {
-				totalDays += v.ConsumedAt.Sub(*v.InstalledAt).Hours() / 24.0
-				validCount++
-			}
 		}
 		// Also count doses from refill logs for the same tanks
 		for _, r := range refillLogs {
 			totalDoses += r.DosesBeforeRefill
 		}
 		avgCO2Doses = float64(totalDoses) / float64(len(consumedCO2))
-		if validCount > 0 {
-			avgCO2Days = totalDays / float64(validCount)
-		}
 	}
 
 	avgFlavorDoses := 0.0
-	avgFlavorDays := 0.0
 	if len(consumedFlavor) > 0 {
 		totalDoses := 0
-		totalDays := 0.0
-		validCount := 0
 		for _, v := range consumedFlavor {
 			totalDoses += v.DosesUsed
-			if v.InstalledAt != nil && v.ConsumedAt != nil {
-				totalDays += v.ConsumedAt.Sub(*v.InstalledAt).Hours() / 24.0
-				validCount++
-			}
 		}
 		avgFlavorDoses = float64(totalDoses) / float64(len(consumedFlavor))
-		if validCount > 0 {
-			avgFlavorDays = totalDays / float64(validCount)
-		}
 	}
 
 	// Spending stats
@@ -436,9 +416,7 @@ func GetDashboard(c *gin.Context) {
 		},
 		"analytics": gin.H{
 			"avg_co2_doses":    math.Round(avgCO2Doses),
-			"avg_co2_days":     math.Round(avgCO2Days*10) / 10,
 			"avg_flavor_doses": math.Round(avgFlavorDoses),
-			"avg_flavor_days":  math.Round(avgFlavorDays*10) / 10,
 		},
 		"spending": gin.H{
 			"total_spent":              math.Round(totalSpent*100) / 100,

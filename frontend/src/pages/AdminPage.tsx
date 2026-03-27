@@ -683,15 +683,6 @@ export default function AdminPage() {
                               bgcolor: "#1E1E1E",
                             }}
                           >
-                            Consumed
-                          </TableCell>
-                          <TableCell
-                            sx={{
-                              color: "#666",
-                              fontSize: "0.75rem",
-                              bgcolor: "#1E1E1E",
-                            }}
-                          >
                             Action
                           </TableCell>
                         </TableRow>
@@ -734,13 +725,6 @@ export default function AdminPage() {
                               sx={{ color: "#aaa", fontSize: "0.75rem" }}
                             >
                               {fmt$(pod.cost || 0)}
-                            </TableCell>
-                            <TableCell
-                              sx={{ color: "#aaa", fontSize: "0.75rem" }}
-                            >
-                              {pod.consumed_at
-                                ? new Date(pod.consumed_at).toLocaleDateString()
-                                : "N/A"}
                             </TableCell>
                             <TableCell sx={{ fontSize: "0.75rem" }}>
                               <Button

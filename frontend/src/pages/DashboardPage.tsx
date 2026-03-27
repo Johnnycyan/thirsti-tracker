@@ -75,6 +75,21 @@ function DashboardPage() {
     };
   }, [chartData]);
 
+  const avgDaysPerItem = useMemo(() => {
+    const co2 =
+      avgDosesPerDay.co2 > 0 && data?.analytics?.avg_co2_doses
+        ? Math.round((data.analytics.avg_co2_doses / avgDosesPerDay.co2) * 10) /
+          10
+        : 0;
+    const flavor =
+      avgDosesPerDay.flavor > 0 && data?.analytics?.avg_flavor_doses
+        ? Math.round(
+            (data.analytics.avg_flavor_doses / avgDosesPerDay.flavor) * 10,
+          ) / 10
+        : 0;
+    return { co2, flavor };
+  }, [avgDosesPerDay, data]);
+
   if (loading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}>
@@ -411,9 +426,7 @@ function DashboardPage() {
           </Typography>
           <Typography variant="body2" sx={{ mb: 0.5, color: "#aaa" }}>
             Avg Days / Tank:{" "}
-            <strong style={{ color: "#00BFFF" }}>
-              {analytics?.avg_co2_days || 0}
-            </strong>
+            <strong style={{ color: "#00BFFF" }}>{avgDaysPerItem.co2}</strong>
           </Typography>
           <Divider sx={{ my: 1.5, borderColor: "#333" }} />
           <Typography variant="body2" sx={{ color: "#aaa" }}>
@@ -455,7 +468,7 @@ function DashboardPage() {
           <Typography variant="body2" sx={{ mb: 0.5, color: "#aaa" }}>
             Avg Days / Pod:{" "}
             <strong style={{ color: "#FF00FF" }}>
-              {analytics?.avg_flavor_days || 0}
+              {avgDaysPerItem.flavor}
             </strong>
           </Typography>
           <Divider sx={{ my: 1.5, borderColor: "#333" }} />
