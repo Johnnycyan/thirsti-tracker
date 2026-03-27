@@ -45,6 +45,7 @@ func main() {
 		machine := api.Group("/machine")
 		{
 			machine.GET("/settings", handlers.GetMachineSettings)
+			machine.GET("/flavors", handlers.GetExtraFlavors)
 			machine.POST("/dispense", handlers.Dispense)
 		}
 

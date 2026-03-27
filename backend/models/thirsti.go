@@ -77,6 +77,7 @@ type DispenseLog struct {
 	SizeOz       int            `json:"size_oz"`
 	CO2Doses     int            `json:"co2_doses"`
 	FlavorDoses  int            `json:"flavor_doses"`
+	FlavorPodID  *uint          `json:"flavor_pod_id"`
 	CreatedAt    time.Time      `json:"created_at"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 }

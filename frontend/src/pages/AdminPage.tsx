@@ -332,6 +332,7 @@ export default function AdminPage() {
         size_oz: parseInt(editingLog.size_oz),
         co2_doses: parseInt(editingLog.co2_doses),
         flavor_doses: parseInt(editingLog.flavor_doses),
+        flavor_pod_id: editingLog.flavor_pod_id || null,
       });
       setEditLogOpen(false);
       fetchAdminLogs();
@@ -907,6 +908,9 @@ export default function AdminPage() {
                         Flavor Doses
                       </TableCell>
                       <TableCell sx={{ color: "#aaa", bgcolor: "#1E1E1E" }}>
+                        Flavor Pod
+                      </TableCell>
+                      <TableCell sx={{ color: "#aaa", bgcolor: "#1E1E1E" }}>
                         Actions
                       </TableCell>
                     </TableRow>
@@ -950,6 +954,38 @@ export default function AdminPage() {
                         >
                           {log.flavor_doses}
                         </TableCell>
+                        <TableCell
+                          sx={{ color: "#fff", borderBottom: "1px solid #333" }}
+                        >
+                          {(() => {
+                            if (!log.flavor_pod_id) return "—";
+                            const pod = [
+                              ...inventory.flavor_pods,
+                              ...archivedPods,
+                            ].find((p) => p.id === log.flavor_pod_id);
+                            if (!pod) return `#${log.flavor_pod_id}`;
+                            return (
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 0.5,
+                                }}
+                              >
+                                <Box
+                                  sx={{
+                                    width: 8,
+                                    height: 8,
+                                    borderRadius: "50%",
+                                    bgcolor: pod.color_hex,
+                                    flexShrink: 0,
+                                  }}
+                                />
+                                {pod.name}
+                              </Box>
+                            );
+                          })()}
+                        </TableCell>
                         <TableCell sx={{ borderBottom: "1px solid #333" }}>
                           <Box sx={{ display: "flex", gap: 0.5 }}>
                             <IconButton
@@ -976,7 +1012,7 @@ export default function AdminPage() {
                     {adminLogs.length === 0 && (
                       <TableRow>
                         <TableCell
-                          colSpan={7}
+                          colSpan={8}
                           sx={{ color: "#555", textAlign: "center", py: 3 }}
                         >
                           No usage history
@@ -1346,6 +1382,40 @@ export default function AdminPage() {
                   setEditingLog({ ...editingLog, flavor_doses: e.target.value })
                 }
               />
+              <FormControl>
+                <InputLabel>Flavor Pod</InputLabel>
+                <Select
+                  value={editingLog.flavor_pod_id || ""}
+                  label="Flavor Pod"
+                  onChange={(e) =>
+                    setEditingLog({
+                      ...editingLog,
+                      flavor_pod_id: e.target.value || null,
+                    })
+                  }
+                >
+                  <MenuItem value="">
+                    <em>None</em>
+                  </MenuItem>
+                  {[...inventory.flavor_pods, ...archivedPods].map((pod) => (
+                    <MenuItem key={pod.id} value={pod.id}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <Box
+                          sx={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: "50%",
+                            bgcolor: pod.color_hex,
+                          }}
+                        />
+                        #{pod.id} — {pod.name} ({pod.status})
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </>
           )}
         </DialogContent>

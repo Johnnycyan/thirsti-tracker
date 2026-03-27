@@ -230,11 +230,11 @@ func InstallFlavor(c *gin.Context) {
 	}
 
 	now := time.Now()
-	// consume currently installed
+	// move currently installed back to extra
 	var installed models.FlavorPod
 	if err := database.DB.Where("status = ?", models.PodInstalled).First(&installed).Error; err == nil {
-		installed.Status = models.PodConsumed
-		installed.ConsumedAt = &now
+		installed.Status = models.PodExtra
+		installed.ConsumedAt = nil
 		database.DB.Save(&installed)
 	}
 
@@ -483,11 +483,12 @@ func GetAdminLogs(c *gin.Context) {
 }
 
 type UpdateDispenseLogRequest struct {
-	SparkleLevel int `json:"sparkle_level"`
-	FlavorLevel  int `json:"flavor_level"`
-	SizeOz       int `json:"size_oz"`
-	CO2Doses     int `json:"co2_doses"`
-	FlavorDoses  int `json:"flavor_doses"`
+	SparkleLevel int   `json:"sparkle_level"`
+	FlavorLevel  int   `json:"flavor_level"`
+	SizeOz       int   `json:"size_oz"`
+	CO2Doses     int   `json:"co2_doses"`
+	FlavorDoses  int   `json:"flavor_doses"`
+	FlavorPodID  *uint `json:"flavor_pod_id"`
 }
 
 func UpdateDispenseLog(c *gin.Context) {
@@ -507,6 +508,7 @@ func UpdateDispenseLog(c *gin.Context) {
 	log.SizeOz = req.SizeOz
 	log.CO2Doses = req.CO2Doses
 	log.FlavorDoses = req.FlavorDoses
+	log.FlavorPodID = req.FlavorPodID
 	database.DB.Save(&log)
 	c.JSON(http.StatusOK, log)
 }
@@ -518,6 +520,40 @@ func DeleteDispenseLog(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Log deleted"})
+}
+
+// GetExtraFlavors returns available flavor options for the submission page.
+func GetExtraFlavors(c *gin.Context) {
+	code := c.Query("code")
+	if !validateCode(code) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid code"})
+		return
+	}
+
+	// Get currently installed flavor
+	var installed models.FlavorPod
+	var installedResult *gin.H
+	if err := database.DB.Where("status = ?", models.PodInstalled).First(&installed).Error; err == nil {
+		installedResult = &gin.H{"name": installed.Name, "color_hex": installed.ColorHex}
+	}
+
+	// Get distinct flavor names from extra pods
+	var extras []models.FlavorPod
+	database.DB.Where("status = ?", models.PodExtra).Find(&extras)
+
+	seen := map[string]bool{}
+	var uniqueExtras []gin.H
+	for _, p := range extras {
+		if !seen[p.Name] {
+			seen[p.Name] = true
+			uniqueExtras = append(uniqueExtras, gin.H{"name": p.Name, "color_hex": p.ColorHex})
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"installed": installedResult,
+		"extras":    uniqueExtras,
+	})
 }
 
 // Submission Logic
@@ -547,9 +583,10 @@ func GetMachineSettings(c *gin.Context) {
 }
 
 type DispenseRequest struct {
-	SparkleLevel int `json:"sparkle_level"`
-	FlavorLevel  int `json:"flavor_level"`
-	SizeOz       int `json:"size_oz"`
+	SparkleLevel int    `json:"sparkle_level"`
+	FlavorLevel  int    `json:"flavor_level"`
+	SizeOz       int    `json:"size_oz"`
+	FlavorName   string `json:"flavor_name"`
 }
 
 func Dispense(c *gin.Context) {
@@ -589,6 +626,49 @@ func Dispense(c *gin.Context) {
 	co2Doses := dosesBase * co2Multiplier
 	flavorDoses := dosesFlavorBase * flavorMultiplier
 
+	// Determine which flavor pod to use
+	var flavorPodID *uint
+	if flavorDoses > 0 {
+		var currentFlavor models.FlavorPod
+		hasInstalled := database.DB.Where("status = ?", models.PodInstalled).First(&currentFlavor).Error == nil
+
+		if req.FlavorName != "" && (!hasInstalled || currentFlavor.Name != req.FlavorName) {
+			// User selected a different flavor — find an extra pod of that flavor
+			// Prefer one with doses_used > 0 (already partially used)
+			var candidate models.FlavorPod
+			err := database.DB.Where("status = ? AND name = ? AND doses_used > 0", models.PodExtra, req.FlavorName).
+				First(&candidate).Error
+			if err != nil {
+				// Fall back to any extra pod of that flavor
+				err = database.DB.Where("status = ? AND name = ?", models.PodExtra, req.FlavorName).
+					First(&candidate).Error
+			}
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "No extra pods available for flavor: " + req.FlavorName})
+				return
+			}
+
+			now := time.Now()
+			// Move currently installed back to extra
+			if hasInstalled {
+				currentFlavor.Status = models.PodExtra
+				currentFlavor.ConsumedAt = nil
+				database.DB.Save(&currentFlavor)
+			}
+			// Install the candidate
+			candidate.Status = models.PodInstalled
+			candidate.InstalledAt = &now
+			database.DB.Save(&candidate)
+			currentFlavor = candidate
+		}
+
+		if currentFlavor.ID != 0 {
+			currentFlavor.DosesUsed += flavorDoses
+			database.DB.Save(&currentFlavor)
+			flavorPodID = &currentFlavor.ID
+		}
+	}
+
 	// Log it
 	log := models.DispenseLog{
 		SparkleLevel: req.SparkleLevel,
@@ -596,23 +676,16 @@ func Dispense(c *gin.Context) {
 		SizeOz:       req.SizeOz,
 		CO2Doses:     co2Doses,
 		FlavorDoses:  flavorDoses,
+		FlavorPodID:  flavorPodID,
 	}
 	database.DB.Create(&log)
 
-	// Update currently installed Tanks/Pods
+	// Update currently installed CO2 tank
 	if co2Doses > 0 {
 		var currentCO2 models.CO2Tank
 		if err := database.DB.Where("status = ?", models.TankInstalled).First(&currentCO2).Error; err == nil {
 			currentCO2.DosesUsed += co2Doses
 			database.DB.Save(&currentCO2)
-		}
-	}
-
-	if flavorDoses > 0 {
-		var currentFlavor models.FlavorPod
-		if err := database.DB.Where("status = ?", models.PodInstalled).First(&currentFlavor).Error; err == nil {
-			currentFlavor.DosesUsed += flavorDoses
-			database.DB.Save(&currentFlavor)
 		}
 	}
 

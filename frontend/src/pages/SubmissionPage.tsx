@@ -9,10 +9,16 @@ import {
   DialogActions,
   Button,
   Divider,
+  Chip,
 } from "@mui/material";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import ThirstiControlPanel from "../components/Graphics/ControlPanel";
 import { apiClient } from "../services/api";
+
+interface FlavorOption {
+  name: string;
+  color_hex: string;
+}
 
 function SubmissionPage() {
   const [searchParams] = useSearchParams();
@@ -31,6 +37,12 @@ function SubmissionPage() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  const [installedFlavor, setInstalledFlavor] = useState<FlavorOption | null>(
+    null,
+  );
+  const [extraFlavors, setExtraFlavors] = useState<FlavorOption[]>([]);
+  const [selectedFlavor, setSelectedFlavor] = useState<string>("");
+
   useEffect(() => {
     if (!code) {
       setError("No submission code provided in the URL (?code=...)");
@@ -40,14 +52,20 @@ function SubmissionPage() {
 
     const fetchSettings = async () => {
       try {
-        const res = await apiClient.get<any>(
-          `/api/machine/settings?code=${code}`,
-        );
+        const [settingsRes, flavorsRes] = await Promise.all([
+          apiClient.get<any>(`/api/machine/settings?code=${code}`),
+          apiClient.get<any>(`/api/machine/flavors?code=${code}`),
+        ]);
         setSettings({
-          sparkleLevel: res.sparkle_level,
-          sizeOz: res.size_oz,
-          flavorLevel: res.flavor_level,
+          sparkleLevel: settingsRes.sparkle_level,
+          sizeOz: settingsRes.size_oz,
+          flavorLevel: settingsRes.flavor_level,
         });
+        if (flavorsRes.installed) {
+          setInstalledFlavor(flavorsRes.installed);
+          setSelectedFlavor(flavorsRes.installed.name);
+        }
+        setExtraFlavors(flavorsRes.extras || []);
       } catch (err: any) {
         setError(err.message || "Invalid code or failed to load settings.");
       } finally {
@@ -69,6 +87,7 @@ function SubmissionPage() {
         sparkle_level: settings.sparkleLevel,
         size_oz: settings.sizeOz,
         flavor_level: settings.flavorLevel,
+        flavor_name: settings.flavorLevel > 0 ? selectedFlavor : "",
       });
       setConfirmOpen(false);
       setSuccess(true);
@@ -153,6 +172,103 @@ function SubmissionPage() {
         onSubmit={() => setConfirmOpen(true)}
       />
 
+      {/* Flavor Selector */}
+      {settings.flavorLevel > 0 &&
+        (installedFlavor || extraFlavors.length > 0) && (
+          <Box
+            sx={{
+              mt: 3,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
+            <Typography variant="body2" sx={{ color: "#aaa" }}>
+              Select Flavor
+            </Typography>
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 1,
+                justifyContent: "center",
+              }}
+            >
+              {/* Deduplicate: show installed + extras that aren't the same name as installed */}
+              {installedFlavor && (
+                <Chip
+                  label={installedFlavor.name}
+                  onClick={() => setSelectedFlavor(installedFlavor.name)}
+                  sx={{
+                    bgcolor:
+                      selectedFlavor === installedFlavor.name
+                        ? installedFlavor.color_hex + "33"
+                        : "#2a2a2a",
+                    color: "#fff",
+                    border:
+                      selectedFlavor === installedFlavor.name
+                        ? `2px solid ${installedFlavor.color_hex}`
+                        : "1px solid #555",
+                    fontWeight:
+                      selectedFlavor === installedFlavor.name
+                        ? "bold"
+                        : "normal",
+                    "&:hover": { bgcolor: installedFlavor.color_hex + "22" },
+                  }}
+                  icon={
+                    <Box
+                      sx={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        bgcolor: installedFlavor.color_hex,
+                        ml: 1,
+                      }}
+                    />
+                  }
+                />
+              )}
+              {extraFlavors
+                .filter(
+                  (f) => !installedFlavor || f.name !== installedFlavor.name,
+                )
+                .map((flavor) => (
+                  <Chip
+                    key={flavor.name}
+                    label={flavor.name}
+                    onClick={() => setSelectedFlavor(flavor.name)}
+                    sx={{
+                      bgcolor:
+                        selectedFlavor === flavor.name
+                          ? flavor.color_hex + "33"
+                          : "#2a2a2a",
+                      color: "#fff",
+                      border:
+                        selectedFlavor === flavor.name
+                          ? `2px solid ${flavor.color_hex}`
+                          : "1px solid #555",
+                      fontWeight:
+                        selectedFlavor === flavor.name ? "bold" : "normal",
+                      "&:hover": { bgcolor: flavor.color_hex + "22" },
+                    }}
+                    icon={
+                      <Box
+                        sx={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: "50%",
+                          bgcolor: flavor.color_hex,
+                          ml: 1,
+                        }}
+                      />
+                    }
+                  />
+                ))}
+            </Box>
+          </Box>
+        )}
+
       {success && (
         <Typography sx={{ mt: 3, color: "#4caf50", fontWeight: "bold" }}>
           Usage logged successfully!
@@ -177,6 +293,9 @@ function SubmissionPage() {
               {settings.sparkleLevel === 0 ? "Still" : settings.sparkleLevel}
             </li>
             <li>Flavor Level: {settings.flavorLevel}</li>
+            {settings.flavorLevel > 0 && selectedFlavor && (
+              <li>Flavor: {selectedFlavor}</li>
+            )}
           </ul>
         </DialogContent>
         <DialogActions>
