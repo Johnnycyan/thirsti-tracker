@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Box,
   Typography,
@@ -36,6 +36,24 @@ function SubmissionPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [countdown, setCountdown] = useState(5);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const openConfirm = useCallback(() => {
+    setCountdown(5);
+    setConfirmOpen(true);
+  }, []);
+
+  useEffect(() => {
+    if (confirmOpen && countdown > 0) {
+      countdownRef.current = setInterval(() => {
+        setCountdown((prev) => prev - 1);
+      }, 1000);
+      return () => {
+        if (countdownRef.current) clearInterval(countdownRef.current);
+      };
+    }
+  }, [confirmOpen, countdown]);
 
   const [installedFlavor, setInstalledFlavor] = useState<FlavorOption | null>(
     null,
@@ -169,7 +187,7 @@ function SubmissionPage() {
       <ThirstiControlPanel
         settings={settings}
         onSettingChange={handleSettingChange}
-        onSubmit={() => setConfirmOpen(true)}
+        onSubmit={openConfirm}
       />
 
       {/* Flavor Selector */}
@@ -279,35 +297,116 @@ function SubmissionPage() {
       <Dialog
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}
-        PaperProps={{ sx: { bgcolor: "#1E1E1E", color: "#fff" } }}
+        PaperProps={{
+          sx: {
+            bgcolor: "#1E1E1E",
+            color: "#fff",
+            border: "1px solid #00BFFF55",
+            borderRadius: 3,
+            minWidth: 340,
+          },
+        }}
       >
-        <DialogTitle>Confirm Usage?</DialogTitle>
+        <DialogTitle
+          sx={{
+            textAlign: "center",
+            fontWeight: 900,
+            fontSize: "1.4rem",
+            pb: 0,
+          }}
+        >
+          Confirm Usage?
+        </DialogTitle>
         <DialogContent>
-          <Typography>
-            Are you sure you want to log this usage with the current settings?
+          <Typography
+            sx={{
+              textAlign: "center",
+              color: "#FFD600",
+              fontWeight: 700,
+              fontSize: "0.95rem",
+              mt: 1,
+              mb: 2,
+            }}
+          >
+            Please verify these settings are correct before confirming.
           </Typography>
-          <ul>
-            <li>Size: {settings.sizeOz}oz</li>
-            <li>
-              Sparkle Level:{" "}
-              {settings.sparkleLevel === 0 ? "Still" : settings.sparkleLevel}
-            </li>
-            <li>Flavor Level: {settings.flavorLevel}</li>
+          <Box
+            sx={{
+              bgcolor: "#00BFFF12",
+              border: "1px solid #00BFFF44",
+              borderRadius: 2,
+              p: 2,
+              display: "flex",
+              flexDirection: "column",
+              gap: 1,
+            }}
+          >
+            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+              <Typography sx={{ color: "#aaa" }}>Size</Typography>
+              <Typography sx={{ fontWeight: 700 }}>
+                {settings.sizeOz} oz
+              </Typography>
+            </Box>
+            <Divider sx={{ borderColor: "#333" }} />
+            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+              <Typography sx={{ color: "#aaa" }}>Sparkle Level</Typography>
+              <Typography sx={{ fontWeight: 700 }}>
+                {settings.sparkleLevel === 0 ? "Still" : settings.sparkleLevel}
+              </Typography>
+            </Box>
+            <Divider sx={{ borderColor: "#333" }} />
+            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+              <Typography sx={{ color: "#aaa" }}>Flavor Level</Typography>
+              <Typography sx={{ fontWeight: 700 }}>
+                {settings.flavorLevel}
+              </Typography>
+            </Box>
             {settings.flavorLevel > 0 && selectedFlavor && (
-              <li>Flavor: {selectedFlavor}</li>
+              <>
+                <Divider sx={{ borderColor: "#333" }} />
+                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                  <Typography sx={{ color: "#aaa" }}>Flavor</Typography>
+                  <Typography sx={{ fontWeight: 700 }}>
+                    {selectedFlavor}
+                  </Typography>
+                </Box>
+              </>
             )}
-          </ul>
+          </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmOpen(false)} sx={{ color: "#aaa" }}>
+        <DialogActions sx={{ justifyContent: "center", pb: 2, gap: 2 }}>
+          <Button
+            onClick={() => setConfirmOpen(false)}
+            variant="outlined"
+            sx={{
+              color: "#aaa",
+              borderColor: "#555",
+              "&:hover": { borderColor: "#888", bgcolor: "#ffffff0a" },
+            }}
+          >
             Cancel
           </Button>
           <Button
             onClick={handleDispense}
-            disabled={submitting}
-            sx={{ color: "#00BFFF", fontWeight: "bold" }}
+            disabled={submitting || countdown > 0}
+            variant="contained"
+            sx={{
+              fontWeight: "bold",
+              minWidth: 120,
+              bgcolor: countdown > 0 ? "#333" : "#00BFFF",
+              color: countdown > 0 ? "#888" : "#000",
+              "&:hover": { bgcolor: "#00a0dd" },
+              "&.Mui-disabled": {
+                bgcolor: "#333",
+                color: "#888",
+              },
+            }}
           >
-            {submitting ? "Logging..." : "Confirm"}
+            {submitting
+              ? "Logging..."
+              : countdown > 0
+                ? `Confirm (${countdown})`
+                : "Confirm"}
           </Button>
         </DialogActions>
       </Dialog>
